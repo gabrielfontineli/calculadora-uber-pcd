@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora Uber — Trocar de carro vale a pena?</title>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --ink: #1a1d21;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --kwid: #2563eb;
+    --novo: #059669;
+    --bad: #dc2626;
+    --warn-bg: #fffbeb;
+    --warn-line: #f59e0b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 16px;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--ink);
+    font-size: 15px; line-height: 1.45;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  h1 { font-size: 1.4rem; margin: 8px 0 2px; }
+  .sub { color: var(--muted); margin: 0 0 16px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 10px; padding: 16px; margin-bottom: 16px;
+  }
+  .card h2 { font-size: 1.05rem; margin: 0 0 4px; }
+  .card h2 .tag { font-size: .75rem; font-weight: 600; padding: 2px 8px; border-radius: 99px; color: #fff; vertical-align: middle; }
+  .tag.kwid { background: var(--kwid); }
+  .tag.novo { background: var(--novo); }
+  .hint { font-size: .8rem; color: var(--muted); margin: 0 0 12px; }
+  label { display: block; font-size: .82rem; font-weight: 600; margin: 10px 0 3px; }
+  label small { font-weight: 400; color: var(--muted); }
+  input[type=number] {
+    width: 100%; padding: 8px 10px; font-size: 1rem;
+    border: 1px solid var(--line); border-radius: 8px; background: #fff;
+  }
+  input[type=number]:focus { outline: 2px solid var(--kwid); border-color: transparent; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .calc-line { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: .92rem; }
+  .calc-line b { font-variant-numeric: tabular-nums; }
+  .calc-line.total { border-bottom: none; font-weight: 700; font-size: 1rem; padding-top: 10px; }
+  .neg { color: var(--bad); }
+  .pos { color: var(--novo); }
+  .verdict {
+    border-radius: 10px; padding: 16px; font-size: 1.05rem;
+    border: 2px solid var(--line); background: var(--card); margin-bottom: 16px;
+  }
+  .verdict .big { font-size: 1.5rem; font-weight: 800; display: block; margin: 4px 0; }
+  .verdict.good { border-color: var(--novo); }
+  .verdict.bad { border-color: var(--bad); }
+  .notes { background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 10px; padding: 14px 18px; font-size: .88rem; }
+  .notes h2 { font-size: 1rem; margin: 0 0 8px; }
+  .notes li { margin-bottom: 6px; }
+  .footer { text-align: center; color: var(--muted); font-size: .78rem; margin: 20px 0; }
+  details summary { cursor: pointer; font-weight: 600; font-size: .9rem; padding: 4px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🚗 Trocar de carro vale a pena?</h1>
+  <p class="sub">Simulador para motorista de Uber — Kwid atual vs. carro novo (Uber Comfort) com desconto PCD. Natal/RN. Todos os valores são editáveis e ficam salvos neste navegador.</p>
+
+  <!-- VEREDITO -->
+  <div class="verdict" id="verdict"></div>
+
+  <!-- CARRO NOVO: COMPRA E FINANCIAMENTO -->
+  <div class="card">
+    <h2>1. Compra do carro novo <span class="tag novo">PCD</span></h2>
+    <p class="hint">O desconto PCD vem das isenções de IPI e ICMS. Em geral fica entre 10% e 25% do preço de tabela, dependendo do carro. Isenção de ICMS vale para carros de até R$ 120 mil (valor de venda com desconto).</p>
+    <div class="row2">
+      <div>
+        <label>Preço de tabela do carro (R$)</label>
+        <input type="number" id="precoTabela" step="1000">
+      </div>
+      <div>
+        <label>Desconto PCD (%) <small>IPI + ICMS</small></label>
+        <input type="number" id="descontoPcd" step="0.5">
+      </div>
+      <div>
+        <label>Valor estimado de venda do Kwid (R$) <small>entra como parte da entrada</small></label>
+        <input type="number" id="valorKwid" step="500">
+      </div>
+      <div>
+        <label>Entrada extra em dinheiro (R$)</label>
+        <input type="number" id="entradaExtra" step="500">
+      </div>
+      <div>
+        <label>Taxa do financiamento (% ao mês)</label>
+        <input type="number" id="taxaMes" step="0.05">
+      </div>
+      <div>
+        <label>Prazo (meses)</label>
+        <input type="number" id="prazoMeses" step="6">
+      </div>
+    </div>
+    <div style="margin-top:14px" id="finResumo"></div>
+  </div>
+
+  <!-- USO / RODAGEM (comum aos dois) -->
+  <div class="card">
+    <h2>2. Rodagem e combustível</h2>
+    <div class="row2">
+      <div>
+        <label>Km rodados por mês <small>ex.: 200 km/dia × 25 dias = 5.000</small></label>
+        <input type="number" id="kmMes" step="100">
+      </div>
+      <div>
+        <label>Preço da gasolina (R$/litro)</label>
+        <input type="number" id="precoGasolina" step="0.05">
+      </div>
+    </div>
+  </div>
+
+  <!-- CENÁRIOS -->
+  <div class="grid">
+    <div class="card">
+      <h2>3. Manter o Kwid <span class="tag kwid">atual</span></h2>
+      <p class="hint">Kwid Zen 2022/2023 com 120 mil km — manutenção tende a subir daqui pra frente.</p>
+      <label>Consumo (km/litro)</label>
+      <input type="number" id="kwidConsumo" step="0.5">
+      <label>Manutenção (R$ por km) <small>pneus, óleo, revisão, desgaste</small></label>
+      <input type="number" id="kwidManutKm" step="0.01">
+      <label>Seguro (R$/mês)</label>
+      <input type="number" id="kwidSeguro" step="10">
+      <label>IPVA + licenciamento (R$/mês) <small>valor anual ÷ 12</small></label>
+      <input type="number" id="kwidIpva" step="5">
+      <label>Ganho bruto no Uber (R$/mês) <small>o que cai na conta, já descontada a taxa da Uber</small></label>
+      <input type="number" id="kwidGanho" step="100">
+    </div>
+
+    <div class="card">
+      <h2>3. Carro novo <span class="tag novo">Comfort</span></h2>
+      <p class="hint">Uber Comfort paga mais por corrida (em geral 20% a 40% acima do UberX) e exige carro mais novo e espaçoso.</p>
+      <label>Consumo (km/litro)</label>
+      <input type="number" id="novoConsumo" step="0.5">
+      <label>Manutenção (R$ por km) <small>carro novo, com garantia — mais barato</small></label>
+      <input type="number" id="novoManutKm" step="0.01">
+      <label>Seguro (R$/mês) <small>carro novo = seguro mais caro</small></label>
+      <input type="number" id="novoSeguro" step="10">
+      <label>IPVA + licenciamento (R$/mês) <small>PCD tem isenção de IPVA no RN — pode ser 0</small></label>
+      <input type="number" id="novoIpva" step="5">
+      <label>Ganho bruto no Uber Comfort (R$/mês)</label>
+      <input type="number" id="novoGanho" step="100">
+    </div>
+  </div>
+
+  <!-- RESULTADOS -->
+  <div class="grid">
+    <div class="card">
+      <h2>Resultado — Kwid <span class="tag kwid">atual</span></h2>
+      <div id="resKwid"></div>
+    </div>
+    <div class="card">
+      <h2>Resultado — Carro novo <span class="tag novo">Comfort</span></h2>
+      <div id="resNovo"></div>
+    </div>
+  </div>
+
+  <!-- NOTAS PCD -->
+  <div class="notes">
+    <h2>⚠️ Pontos importantes — compra PCD no nome da irmã</h2>
+    <ul>
+      <li><b>Carro fica no nome da pessoa com deficiência.</b> Como ela não dirige, é preciso registrar no Detran/RN até <b>3 condutores autorizados</b> (a mãe entra aqui). A autorização é feita junto com o pedido de isenção.</li>
+      <li><b>Financiamento também sai no nome da irmã.</b> O banco vai exigir comprovação de renda dela — ou entrada maior. Se ela não tiver renda, algumas financeiras aceitam <b>composição de renda com familiar</b> ou avalista. Confirmar antes na concessionária/banco.</li>
+      <li><b>Carência de revenda:</b> o carro comprado com isenção não pode ser vendido antes do prazo legal (hoje <b>4 anos para o IPI</b> e <b>2 anos para o ICMS</b> — confirmar regras vigentes na compra), sob pena de devolver os impostos.</li>
+      <li><b>Isenção de IPVA no RN:</b> veículo de PCD tem isenção de IPVA — pedir na SET/RN após a compra. Por isso o campo IPVA do carro novo pode ficar em 0.</li>
+      <li><b>Uber aceita carro no nome de terceiro</b> — a motorista (mãe) cadastra o carro no app dela normalmente. Verificar os requisitos do Comfort em Natal (ano mínimo, ar-condicionado, 4 portas, porta-malas).</li>
+      <li><b>Nova simulação de isenção leva tempo:</b> laudo médico + processo na Receita/SET costuma levar de 1 a 3 meses. Planejar a venda do Kwid para depois da aprovação.</li>
+      <li>Valores de impostos, taxas e regras mudam — este simulador é para planejamento, não substitui a proposta real da concessionária e do banco.</li>
+    </ul>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <details>
+      <summary>Como a parcela é calculada (Tabela Price)</summary>
+      <p class="hint" style="margin-top:8px">
+        Valor financiado = preço com desconto PCD − entrada (venda do Kwid + dinheiro).<br>
+        Parcela = Valor financiado × i ÷ (1 − (1 + i)<sup>−n</sup>), onde i = taxa mensal e n = número de meses.<br>
+        Bancos reais adicionam IOF e tarifas — a parcela real pode ficar um pouco acima. PCD com deficiência física condutora tem isenção de IOF; como a irmã não dirige, essa isenção não se aplica.
+      </p>
+    </details>
+    <button onclick="restaurarPadroes()" style="margin-top:8px; padding:8px 14px; border:1px solid var(--line); border-radius:8px; background:#fff; cursor:pointer">Restaurar valores padrão</button>
+  </div>
+
+  <p class="footer">Simulador feito para uso pessoal. Valores padrão são estimativas para Natal/RN em 2026 — ajuste com os números reais.</p>
+</div>
+
+<script>
+'use strict';
+
+const PADROES = {
+  precoTabela: 130000,  // ex.: sedan compacto apto ao Comfort
+  descontoPcd: 14,
+  valorKwid: 36000,
+  entradaExtra: 5000,
+  taxaMes: 1.6,
+  prazoMeses: 48,
+  kmMes: 5000,
+  precoGasolina: 6.30,
+  kwidConsumo: 14,
+  kwidManutKm: 0.16,
+  kwidSeguro: 190,
+  kwidIpva: 55,
+  kwidGanho: 6500,
+  novoConsumo: 12,
+  novoManutKm: 0.10,
+  novoSeguro: 380,
+  novoIpva: 0,
+  novoGanho: 8200,
+};
+const CAMPOS = Object.keys(PADROES);
+
+const fmt = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+const fmt2 = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const $ = id => document.getElementById(id);
+const num = id => parseFloat($(id).value) || 0;
+
+// Tabela Price
+function parcelaPrice(valor, taxaMesPct, meses) {
+  if (valor <= 0 || meses <= 0) return 0;
+  const i = taxaMesPct / 100;
+  if (i === 0) return valor / meses;
+  return valor * i / (1 - Math.pow(1 + i, -meses));
+}
+// ponytail: auto-teste da fórmula Price — R$10.000, 1%/mês, 12x ≈ R$888,49
+console.assert(Math.abs(parcelaPrice(10000, 1, 12) - 888.49) < 0.01, 'Fórmula Price incorreta');
+
+function custosMensais(consumo, manutKm, seguro, ipva) {
+  const km = num('kmMes');
+  const combustivel = consumo > 0 ? (km / consumo) * num('precoGasolina') : 0;
+  const manutencao = km * manutKm;
+  return { combustivel, manutencao, seguro, ipva, total: combustivel + manutencao + seguro + ipva };
+}
+
+function linha(nome, valor, cls) {
+  return `<div class="calc-line"><span>${nome}</span><b class="${cls || ''}">${fmt2(valor)}</b></div>`;
+}
+
+function calcular() {
+  // financiamento
+  const precoComDesconto = num('precoTabela') * (1 - num('descontoPcd') / 100);
+  const entrada = num('valorKwid') + num('entradaExtra');
+  const financiado = Math.max(0, precoComDesconto - entrada);
+  const parcela = parcelaPrice(financiado, num('taxaMes'), num('prazoMeses'));
+  const totalPago = parcela * num('prazoMeses') + entrada;
+
+  let avisoIcms = '';
+  if (precoComDesconto > 120000) {
+    avisoIcms = `<div class="calc-line" style="color:var(--bad)"><span>⚠️ Acima de R$ 120 mil — pode perder a isenção de ICMS. Confira o desconto.</span></div>`;
+  }
+  $('finResumo').innerHTML =
+    linha('Preço com desconto PCD', precoComDesconto) +
+    linha('Entrada total (Kwid + dinheiro)', -entrada) +
+    linha('Valor financiado', financiado) +
+    `<div class="calc-line total"><span>Parcela mensal (${num('prazoMeses')}x)</span><b>${fmt2(parcela)}</b></div>` +
+    linha('Custo total ao fim do financiamento', totalPago) +
+    avisoIcms;
+
+  // cenário Kwid
+  const ck = custosMensais(num('kwidConsumo'), num('kwidManutKm'), num('kwidSeguro'), num('kwidIpva'));
+  const lucroKwid = num('kwidGanho') - ck.total;
+  $('resKwid').innerHTML =
+    linha('Ganho bruto Uber', num('kwidGanho'), 'pos') +
+    linha('Combustível', -ck.combustivel, 'neg') +
+    linha('Manutenção', -ck.manutencao, 'neg') +
+    linha('Seguro', -ck.seguro, 'neg') +
+    linha('IPVA/licenciamento', -ck.ipva, 'neg') +
+    `<div class="calc-line total"><span>Sobra por mês (sem parcela)</span><b>${fmt2(lucroKwid)}</b></div>`;
+
+  // cenário novo
+  const cn = custosMensais(num('novoConsumo'), num('novoManutKm'), num('novoSeguro'), num('novoIpva'));
+  const sobraAntesParcela = num('novoGanho') - cn.total;
+  const lucroNovo = sobraAntesParcela - parcela;
+  $('resNovo').innerHTML =
+    linha('Ganho bruto Uber Comfort', num('novoGanho'), 'pos') +
+    linha('Combustível', -cn.combustivel, 'neg') +
+    linha('Manutenção', -cn.manutencao, 'neg') +
+    linha('Seguro', -cn.seguro, 'neg') +
+    linha('IPVA/licenciamento', -cn.ipva, 'neg') +
+    linha('Parcela do financiamento', -parcela, 'neg') +
+    `<div class="calc-line total"><span>Sobra por mês (com parcela)</span><b class="${lucroNovo < 0 ? 'neg' : ''}">${fmt2(lucroNovo)}</b></div>` +
+    `<div class="calc-line"><span>Sobra após quitar (${num('prazoMeses')} meses)</span><b class="pos">${fmt2(sobraAntesParcela)}</b></div>`;
+
+  // veredito
+  const dif = lucroNovo - lucroKwid;
+  const v = $('verdict');
+  if (lucroNovo < 0) {
+    v.className = 'verdict bad';
+    v.innerHTML = `Com esses números, o carro novo <b>não se paga</b>: faltariam <span class="big neg">${fmt(-lucroNovo)}/mês</span> durante o financiamento. Tente mais entrada, prazo maior ou carro mais barato.`;
+  } else if (dif >= 0) {
+    v.className = 'verdict good';
+    v.innerHTML = `✅ Com esses números, o carro novo <b>vale a pena já durante o financiamento</b>: sobra <span class="big pos">${fmt(dif)}/mês a mais</span> que mantendo o Kwid (${fmt(lucroNovo)} vs ${fmt(lucroKwid)}). Depois de quitado, a sobra vai para ${fmt(sobraAntesParcela)}/mês.`;
+  } else {
+    v.className = 'verdict';
+    v.innerHTML = `Durante o financiamento a mãe ganharia <span class="big neg">${fmt(-dif)}/mês a menos</span> que com o Kwid (${fmt(lucroNovo)} vs ${fmt(lucroKwid)}) — mas ainda sobra dinheiro, e ao quitar a sobra sobe para <b>${fmt(sobraAntesParcela)}/mês</b>. É uma troca de lucro agora por patrimônio e carro melhor.`;
+  }
+
+  localStorage.setItem('calcUberPcd', JSON.stringify(Object.fromEntries(CAMPOS.map(c => [c, num(c)]))));
+}
+
+function carregar() {
+  let salvo = {};
+  try { salvo = JSON.parse(localStorage.getItem('calcUberPcd')) || {}; } catch (e) {}
+  for (const c of CAMPOS) {
+    $(c).value = salvo[c] ?? PADROES[c];
+    $(c).addEventListener('input', calcular);
+  }
+  calcular();
+}
+
+function restaurarPadroes() {
+  localStorage.removeItem('calcUberPcd');
+  for (const c of CAMPOS) $(c).value = PADROES[c];
+  calcular();
+}
+
+carregar();
+</script>
+</body>
+</html>
